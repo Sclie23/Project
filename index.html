@@ -3199,7 +3199,7 @@
                             <div class="chart-card">
                                 <div class="chart-header">
                                     <h3>
-                                        💰 Sisa Keuangan
+                                        💰 Sisa Keuangan (Kumulatif)
                                         <span class="badge" id="timeLabel">per Hari</span>
                                         <span class="badge" style="background:var(--hover-bg);color:var(--text-muted);font-size:9px;">klik toggle untuk ubah tipe</span>
                                         <span class="chart-type-label bar-type" id="chartTypeLabel">📊 Batang</span>
@@ -5821,7 +5821,7 @@
         }
 
         // ==============================================
-        // 26. UPDATE BAR/LINE CHART
+        // 26. UPDATE BAR/LINE CHART - KUMULATIF DENGAN SALDO AWAL
         // ==============================================
 
         function updateBarChart() {
@@ -5837,12 +5837,26 @@
             if (currentPeriod === 'days') {
                 const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
                 const dayData = {};
-                let runningBalance = 0;
 
+                // Initialize all days with 0
                 for (let d = 1; d <= daysInMonth; d++) {
                     dayData[d] = { income: 0, expense: 0, balance: 0 };
                 }
 
+                // Calculate cumulative balance starting from previous month
+                // First, get all transactions before this month
+                const prevMonthTransactions = transaksi.filter(t => {
+                    const [y, m] = t.tanggal.split('-').map(Number);
+                    return t.mode === currentMode && (y < currentYear || (y === currentYear && m < currentMonth));
+                });
+
+                // Calculate starting balance from previous months
+                let runningBalance = prevMonthTransactions.reduce((sum, t) => {
+                    if (t.jenis === 'Pemasukan') return sum + t.nominal;
+                    else return sum - t.nominal;
+                }, 0);
+
+                // Add current month transactions
                 sortedTransaksi.forEach(t => {
                     const [y, m, d] = t.tanggal.split('-').map(Number);
                     if (y === currentYear && m === currentMonth) {
@@ -5854,6 +5868,7 @@
                     }
                 });
 
+                // Calculate cumulative balance for each day
                 for (let d = 1; d <= daysInMonth; d++) {
                     const data = dayData[d];
                     runningBalance += data.income - data.expense;
@@ -5864,11 +5879,19 @@
 
             } else if (currentPeriod === 'months') {
                 const monthData = {};
-                let runningBalance = 0;
 
                 for (let m = 1; m <= 12; m++) {
                     monthData[m] = { income: 0, expense: 0, balance: 0 };
                 }
+
+                // Get starting balance from previous years
+                let runningBalance = transaksi.filter(t => {
+                    const [y] = t.tanggal.split('-').map(Number);
+                    return t.mode === currentMode && y < currentYear;
+                }).reduce((sum, t) => {
+                    if (t.jenis === 'Pemasukan') return sum + t.nominal;
+                    else return sum - t.nominal;
+                }, 0);
 
                 sortedTransaksi.forEach(t => {
                     const [y, m] = t.tanggal.split('-').map(Number);
@@ -5892,16 +5915,18 @@
 
             } else if (currentPeriod === 'years') {
                 const yearData = {};
-                const startYear = currentYear - 9;
-                let runningBalance = 0;
+                const startYear = 2020;
+                const endYear = currentYear;
 
-                for (let y = startYear; y <= currentYear; y++) {
+                for (let y = startYear; y <= endYear; y++) {
                     yearData[y] = { income: 0, expense: 0, balance: 0 };
                 }
 
+                let runningBalance = 0;
+                // For years, start from beginning
                 sortedTransaksi.forEach(t => {
                     const year = parseInt(t.tanggal.split('-')[0]);
-                    if (year >= startYear && year <= currentYear) {
+                    if (year >= startYear && year <= endYear) {
                         if (t.jenis === 'Pemasukan') {
                             yearData[year].income += t.nominal;
                         } else {
@@ -5910,7 +5935,7 @@
                     }
                 });
 
-                for (let y = startYear; y <= currentYear; y++) {
+                for (let y = startYear; y <= endYear; y++) {
                     const data = yearData[y];
                     runningBalance += data.income - data.expense;
                     data.balance = runningBalance;
@@ -5932,7 +5957,7 @@
                 data: {
                     labels: barLabels,
                     datasets: [{
-                        label: 'Sisa Keuangan',
+                        label: 'Sisa Keuangan (Kumulatif)',
                         data: barValues,
                         backgroundColor: isLine ? `${colors[0]}33` : barColors,
                         borderColor: colors[0],
@@ -6210,6 +6235,7 @@
         console.log('📄 Export ke Excel/CSV tersedia di halaman Riwayat');
         console.log('🖼️ Logo menggunakan logo.webp');
         console.log('📱 Diagram lingkaran dioptimasi untuk Android');
+        console.log('📈 Grafik kumulatif dengan saldo awal dari periode sebelumnya');
     </script>
 
 </body>
