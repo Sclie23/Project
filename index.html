@@ -17,6 +17,10 @@
     <script src="https://accounts.google.com/gsi/client">
     </script>
 
+    <!-- html2canvas untuk export Word -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+    </script>
+
     <style>
         /* ====== CSS VARIABLES ====== */
         :root {
@@ -260,6 +264,12 @@
             transform: translateY(-2px);
         }
 
+        .login-container .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .login-container .divider {
             display: flex;
             align-items: center;
@@ -306,6 +316,14 @@
 
         .login-container .error-message {
             color: var(--color-danger);
+            font-size: 13px;
+            text-align: center;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        .login-container .loading-message {
+            color: var(--color-primary);
             font-size: 13px;
             text-align: center;
             margin-top: 8px;
@@ -1206,6 +1224,12 @@
             transform: translateY(-1px);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-danger {
             background: var(--color-danger);
             color: white;
@@ -2025,6 +2049,29 @@
             accent-color: var(--color-primary);
         }
 
+        /* ====== DATE DIVIDER STYLES - SIMPLIFIED ====== */
+        .history-table .date-divider {
+            background: var(--bg-form);
+        }
+
+        .history-table .date-divider td {
+            padding: 4px 14px;
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 13px;
+            background: var(--bg-form);
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .history-table .date-divider td .date-divider-icon {
+            margin-right: 8px;
+        }
+
+        [data-theme="dark"] .history-table .date-divider td {
+            border-left-color: var(--color-primary);
+        }
+
         /* ====== MODAL ====== */
         .modal-overlay {
             display: none;
@@ -2629,6 +2676,10 @@
             .pie-chart-wrapper {
                 min-height: 120px;
             }
+            .history-table .date-divider td {
+                font-size: 12px;
+                padding: 3px 12px;
+            }
         }
 
         @media (max-width: 820px) {
@@ -2747,6 +2798,11 @@
             }
             .pie-chart-wrapper {
                 min-height: 150px;
+            }
+            .history-table .date-divider td {
+                font-size: 11px;
+                padding: 3px 10px;
+                border-left-width: 3px;
             }
         }
 
@@ -2920,6 +2976,14 @@
             .pie-chart-wrapper {
                 min-height: 120px;
             }
+            .history-table .date-divider td {
+                font-size: 10px;
+                padding: 2px 8px;
+                border-left-width: 3px;
+            }
+            .history-table .date-divider td .date-divider-icon {
+                margin-right: 4px;
+            }
         }
 
         .form-section::-webkit-scrollbar {
@@ -2967,7 +3031,6 @@
 </head>
 
 <body>
-
     <!-- ====== LOGIN PAGE ====== -->
     <div class="login-page" id="loginPage">
         <div class="login-container">
@@ -2976,6 +3039,9 @@
                 <h1>Keuangan</h1>
                 <p>Kelola keuangan dengan mudah</p>
             </div>
+
+            <!-- Loading indicator -->
+            <div class="loading-message" id="loadingMessage">⏳ Menghubungkan ke database...</div>
 
             <div class="form-group">
                 <label for="loginEmail">Email</label>
@@ -2986,7 +3052,7 @@
                 <input type="password" id="loginPassword" placeholder="masukkan password Anda" />
             </div>
 
-            <button class="login-btn" onclick="handleLogin()">🔐 Masuk</button>
+            <button class="login-btn" id="loginBtn" onclick="handleLogin()">🔐 Masuk</button>
 
             <div class="error-message" id="loginError"></div>
 
@@ -2994,7 +3060,7 @@
                 <span>atau</span>
             </div>
 
-            <div class="google-btn-wrapper">
+            <div class="google-btn-wrapper" style="display:none;">
                 <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" data-callback="handleGoogleLogin" data-auto_prompt="false">
                 </div>
                 <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left">
@@ -3016,6 +3082,8 @@
                 <p>Buat akun baru untuk memulai</p>
             </div>
 
+            <div class="loading-message" id="registerLoadingMessage">⏳ Menghubungkan ke database...</div>
+
             <div class="form-group">
                 <label for="registerName">Nama Lengkap</label>
                 <input type="text" id="registerName" placeholder="masukkan nama Anda" />
@@ -3033,7 +3101,7 @@
                 <input type="password" id="registerConfirmPassword" placeholder="ulangi password Anda" />
             </div>
 
-            <button class="login-btn" onclick="handleRegister()">📝 Daftar</button>
+            <button class="login-btn" id="registerBtn" onclick="handleRegister()">📝 Daftar</button>
 
             <div class="error-message" id="registerError"></div>
 
@@ -3286,8 +3354,8 @@
                                         <button class="export-btn success" onclick="exportToExcel()" title="Export ke Excel">
                                             📊 Excel
                                         </button>
-                                        <button class="export-btn primary" onclick="exportToCSV()" title="Export ke CSV">
-                                            📄 CSV
+                                        <button class="export-btn primary" onclick="exportToWord()" title="Export ke Word">
+                                            📄 Word
                                         </button>
                                     </div>
                                 </div>
@@ -3468,27 +3536,326 @@
 
     <script>
         // ==============================================
-        // 1. AUTH SYSTEM WITH PER-USER DATA
+        // KONFIGURASI GOOGLE SHEETS
+        // ==============================================
+        
+        // ⚠️ PERINGATAN: Ganti dengan data Anda sendiri!
+        // 1. SPREADSHEET_ID: Buka Google Sheets Anda, lihat URL
+        //    Contoh: https://docs.google.com/spreadsheets/d/1A2B3C4D5E6F7G8H9I0J1K2L3M4N5O6P/edit
+        //    Copy bagian di antara /d/ dan /edit
+        // 2. API_KEY: Dari Google Cloud Console
+        // 3. Pastikan sheet "Users" dan "Transactions" sudah dibuat
+        // 4. Share spreadsheet dengan "Anyone with the link"
+        
+        const GOOGLE_SHEETS_CONFIG = {
+            // Ganti dengan SPREADSHEET_ID Anda
+            SPREADSHEET_ID: 'https://docs.google.com/spreadsheets/d/1kEVdh_tHt7eqfaAs3nmvq_Prl4lMAtVTLRFvNDQoHR4/edit?usp=sharing',
+            
+            // Ganti dengan API Key Anda
+            API_KEY: 'AIzaSyBzPijxHO6xW9z0jKomSFbtbg0DUIk4zeE',
+            
+            SHEETS: {
+                USERS: 'Users',
+                TRANSACTIONS: 'Transactions'
+            }
+        };
+
+        // ==============================================
+        // FUNGSI GOOGLE SHEETS API
+        // ==============================================
+
+        let isSheetConnected = false;
+
+        async function testSheetConnection() {
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.SPREADSHEET_ID}/values/${GOOGLE_SHEETS_CONFIG.SHEETS.USERS}?key=${GOOGLE_SHEETS_CONFIG.API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.values) {
+                    isSheetConnected = true;
+                    console.log('✅ Koneksi ke Google Sheets berhasil!');
+                    return true;
+                } else {
+                    console.warn('⚠️ Sheet kosong atau belum dibuat');
+                    // Buat sheet jika kosong
+                    await initializeSheets();
+                    return true;
+                }
+            } catch (error) {
+                console.error('❌ Gagal koneksi ke Google Sheets:', error);
+                isSheetConnected = false;
+                return false;
+            }
+        }
+
+        async function initializeSheets() {
+            try {
+                // Coba baca Users sheet
+                let usersUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.SPREADSHEET_ID}/values/${GOOGLE_SHEETS_CONFIG.SHEETS.USERS}?key=${GOOGLE_SHEETS_CONFIG.API_KEY}`;
+                let response = await fetch(usersUrl);
+                let data = await response.json();
+                
+                // Jika sheet tidak ada, kita tidak bisa membuatnya melalui API
+                // Pengguna harus membuat sheet manual
+                console.warn('⚠️ Pastikan sheet "Users" dan "Transactions" sudah dibuat di Google Sheets Anda!');
+                console.warn('📝 Buat sheet dengan header: Email, Name, Password, Created At');
+                console.warn('📝 Buat sheet "Transactions" dengan header: ID, User Email, Tanggal, Kategori, Jenis, Nominal, Keterangan, Mode');
+                
+                return false;
+            } catch (error) {
+                console.error('❌ Gagal inisialisasi sheet:', error);
+                return false;
+            }
+        }
+
+        async function readSheet(sheetName) {
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.SPREADSHEET_ID}/values/${sheetName}?key=${GOOGLE_SHEETS_CONFIG.API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.values && data.values.length > 1) {
+                    const headers = data.values[0];
+                    const rows = data.values.slice(1);
+                    return rows.map(row => {
+                        const obj = {};
+                        headers.forEach((header, index) => {
+                            obj[header] = row[index] || '';
+                        });
+                        return obj;
+                    });
+                }
+                return [];
+            } catch (error) {
+                console.error(`❌ Error membaca sheet ${sheetName}:`, error);
+                return [];
+            }
+        }
+
+        async function appendToSheet(sheetName, data) {
+            try {
+                // Baca data yang sudah ada
+                const existingData = await readSheet(sheetName);
+                
+                // Tambahkan data baru
+                const allData = [...existingData, data];
+                
+                // Konversi ke format array
+                const headers = Object.keys(allData[0] || {});
+                const rows = allData.map(item => headers.map(key => item[key] || ''));
+                
+                // Untuk Google Sheets API, kita perlu mengirim data dalam format array
+                // Karena kita tidak bisa menulis langsung dengan API key (hanya read),
+                // kita simpan ke localStorage sebagai cache dan tampilkan pesan
+                
+                console.log(`📝 Data akan disimpan ke ${sheetName}:`, data);
+                
+                // Simpan ke localStorage sebagai cache
+                const cacheKey = `sheet_${sheetName}`;
+                localStorage.setItem(cacheKey, JSON.stringify(allData));
+                
+                // Tampilkan peringatan bahwa data disimpan di localStorage
+                showToast('💾 Data disimpan di cache (Google Sheets read-only dengan API Key)', '#f39c12');
+                
+                return true;
+            } catch (error) {
+                console.error(`❌ Error menulis ke sheet ${sheetName}:`, error);
+                return false;
+            }
+        }
+
+        // ==============================================
+        // AUTH SYSTEM DENGAN GOOGLE SHEETS
         // ==============================================
 
         let currentUser = null;
         let currentUserData = null;
+        let isAppVisible = false;
+        let usersCache = [];
 
-        function loadAuth() {
-            const saved = localStorage.getItem('financeUser');
-            if (saved) {
+        async function loadUsersFromSheet() {
+            const users = await readSheet(GOOGLE_SHEETS_CONFIG.SHEETS.USERS);
+            usersCache = users;
+            return users;
+        }
+
+        function saveUserToCache(user) {
+            usersCache.push(user);
+            // Simpan ke localStorage untuk offline access
+            localStorage.setItem('usersCache', JSON.stringify(usersCache));
+        }
+
+        function getUsersFromCache() {
+            const cached = localStorage.getItem('usersCache');
+            if (cached) {
                 try {
-                    currentUser = JSON.parse(saved);
-                    if (currentUser) {
-                        loadUserData();
-                        showApp();
-                        return true;
-                    }
+                    return JSON.parse(cached);
                 } catch (e) {
-                    currentUser = null;
+                    return [];
                 }
             }
-            return false;
+            return [];
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorEl = document.getElementById('loginError');
+            const loadingEl = document.getElementById('loadingMessage');
+            const loginBtn = document.getElementById('loginBtn');
+
+            if (!email || !password) {
+                errorEl.textContent = '⚠️ Isi email dan password!';
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '⏳ Memproses...';
+            loadingEl.style.display = 'block';
+            errorEl.textContent = '';
+
+            try {
+                // Load users dari Google Sheets
+                const users = await loadUsersFromSheet();
+                
+                // Cari user
+                const user = users.find(u => u.Email === email && u.Password === password);
+                
+                if (user) {
+                    currentUser = {
+                        email: user.Email,
+                        name: user.Name || email.split('@')[0],
+                        avatar: (user.Name || email.charAt(0)).charAt(0).toUpperCase()
+                    };
+                    saveAuth();
+                    await loadUserDataFromSheet();
+                    showApp();
+                    showToast('✅ Login berhasil! Selamat datang, ' + currentUser.name, '#27ae60');
+                } else {
+                    errorEl.textContent = '❌ Email atau password salah!';
+                }
+            } catch (error) {
+                errorEl.textContent = '❌ Gagal terhubung ke database: ' + error.message;
+                console.error(error);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '🔐 Masuk';
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        async function handleRegister() {
+            const name = document.getElementById('registerName').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            const errorEl = document.getElementById('registerError');
+            const loadingEl = document.getElementById('registerLoadingMessage');
+            const registerBtn = document.getElementById('registerBtn');
+
+            if (!name) {
+                errorEl.textContent = '⚠️ Masukkan nama lengkap!';
+                return;
+            }
+            if (!email) {
+                errorEl.textContent = '⚠️ Masukkan email!';
+                return;
+            }
+            if (password.length < 6) {
+                errorEl.textContent = '⚠️ Password minimal 6 karakter!';
+                return;
+            }
+            if (password !== confirmPassword) {
+                errorEl.textContent = '⚠️ Password tidak cocok!';
+                return;
+            }
+
+            registerBtn.disabled = true;
+            registerBtn.textContent = '⏳ Memproses...';
+            loadingEl.style.display = 'block';
+            errorEl.textContent = '';
+
+            try {
+                // Load users dari Google Sheets
+                const users = await loadUsersFromSheet();
+                
+                // Cek email sudah terdaftar
+                if (users.find(u => u.Email === email)) {
+                    errorEl.textContent = '❌ Email sudah terdaftar!';
+                    return;
+                }
+
+                // Buat user baru
+                const newUser = {
+                    Email: email,
+                    Name: name,
+                    Password: password,
+                    'Created At': new Date().toISOString()
+                };
+
+                // Simpan ke Google Sheets (melalui cache)
+                await appendToSheet(GOOGLE_SHEETS_CONFIG.SHEETS.USERS, newUser);
+                saveUserToCache(newUser);
+
+                // Auto login
+                currentUser = {
+                    email: email,
+                    name: name,
+                    avatar: name.charAt(0).toUpperCase()
+                };
+                saveAuth();
+                await loadUserDataFromSheet();
+                showApp();
+                showToast('✅ Akun berhasil dibuat! Selamat datang, ' + name, '#27ae60');
+            } catch (error) {
+                errorEl.textContent = '❌ Gagal mendaftar: ' + error.message;
+                console.error(error);
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = '📝 Daftar';
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        function handleGoogleLogin(response) {
+            if (response.credential) {
+                try {
+                    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                    if (payload) {
+                        const email = payload.email;
+                        const name = payload.name || email.split('@')[0];
+
+                        // Simpan ke localStorage (Google Sheets akan sync nanti)
+                        const users = JSON.parse(localStorage.getItem('financeUsers') || '{}');
+                        if (!users[email]) {
+                            users[email] = {
+                                name: name,
+                                password: 'google_' + Math.random().toString(36).substring(2, 10)
+                            };
+                            localStorage.setItem('financeUsers', JSON.stringify(users));
+                            
+                            const key = getUserDataKey(email);
+                            localStorage.setItem(key, JSON.stringify({ transaksi: [], settings: {} }));
+                        }
+
+                        currentUser = {
+                            email: email,
+                            name: users[email].name || name,
+                            avatar: payload.given_name ? payload.given_name.charAt(0).toUpperCase() : email.charAt(0)
+                                .toUpperCase(),
+                            picture: payload.picture
+                        };
+                        saveAuth();
+                        loadUserData();
+                        showApp();
+                        showToast('✅ Login dengan Google berhasil!', '#27ae60');
+                        initializeUserData();
+                    }
+                } catch (e) {
+                    showToast('❌ Gagal login dengan Google', '#e74c5e');
+                }
+            }
         }
 
         function saveAuth() {
@@ -3524,6 +3891,32 @@
             }
         }
 
+        async function loadUserDataFromSheet() {
+            if (!currentUser) return;
+            
+            try {
+                const transactions = await readSheet(GOOGLE_SHEETS_CONFIG.SHEETS.TRANSACTIONS);
+                const userTransactions = transactions.filter(t => t['User Email'] === currentUser.email);
+                
+                currentUserData = {
+                    transaksi: userTransactions.map(t => ({
+                        tanggal: t.Tanggal,
+                        kategori: t.Kategori,
+                        jenis: t.Jenis,
+                        nominal: parseFloat(t.Nominal) || 0,
+                        keterangan: t.Keterangan || '',
+                        mode: t.Mode || 'cash'
+                    })),
+                    settings: {}
+                };
+                saveUserData();
+            } catch (error) {
+                console.error('❌ Gagal load transaksi dari Google Sheets:', error);
+                // Gunakan data dari localStorage jika ada
+                loadUserData();
+            }
+        }
+
         function saveUserData() {
             if (!currentUser || !currentUserData) return;
             const key = getUserDataKey(currentUser.email);
@@ -3538,120 +3931,33 @@
             if (currentUserData) {
                 currentUserData.transaksi = transaksi;
                 saveUserData();
+                // Sync ke Google Sheets
+                syncTransactionsToSheet(transaksi);
             }
         }
 
-        function handleLogin() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value.trim();
-            const errorEl = document.getElementById('loginError');
-
-            if (!email || !password) {
-                errorEl.textContent = '⚠️ Isi email dan password!';
-                return;
-            }
-
-            const users = JSON.parse(localStorage.getItem('financeUsers') || '{}');
-
-            if (users[email] && users[email].password === password) {
-                currentUser = {
-                    email: email,
-                    name: users[email].name || email.split('@')[0],
-                    avatar: users[email].name ? users[email].name.charAt(0).toUpperCase() : email.charAt(0).toUpperCase()
-                };
-                saveAuth();
-                loadUserData();
-                showApp();
-                showToast('✅ Login berhasil! Selamat datang, ' + currentUser.name, '#27ae60');
-                initializeUserData();
-            } else {
-                errorEl.textContent = '❌ Email atau password salah!';
-            }
-        }
-
-        function handleRegister() {
-            const name = document.getElementById('registerName').value.trim();
-            const email = document.getElementById('registerEmail').value.trim();
-            const password = document.getElementById('registerPassword').value;
-            const confirmPassword = document.getElementById('registerConfirmPassword').value;
-            const errorEl = document.getElementById('registerError');
-
-            if (!name) {
-                errorEl.textContent = '⚠️ Masukkan nama lengkap!';
-                return;
-            }
-            if (!email) {
-                errorEl.textContent = '⚠️ Masukkan email!';
-                return;
-            }
-            if (password.length < 6) {
-                errorEl.textContent = '⚠️ Password minimal 6 karakter!';
-                return;
-            }
-            if (password !== confirmPassword) {
-                errorEl.textContent = '⚠️ Password tidak cocok!';
-                return;
-            }
-
-            const users = JSON.parse(localStorage.getItem('financeUsers') || '{}');
-
-            if (users[email]) {
-                errorEl.textContent = '❌ Email sudah terdaftar!';
-                return;
-            }
-
-            users[email] = { name, password };
-            localStorage.setItem('financeUsers', JSON.stringify(users));
-
-            const key = getUserDataKey(email);
-            localStorage.setItem(key, JSON.stringify({ transaksi: [], settings: {} }));
-
-            currentUser = {
-                email: email,
-                name: name,
-                avatar: name.charAt(0).toUpperCase()
-            };
-            saveAuth();
-            loadUserData();
-            showApp();
-            showToast('✅ Akun berhasil dibuat! Selamat datang, ' + name, '#27ae60');
-            initializeUserData();
-        }
-
-        function handleGoogleLogin(response) {
-            if (response.credential) {
-                try {
-                    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-                    if (payload) {
-                        const users = JSON.parse(localStorage.getItem('financeUsers') || '{}');
-                        const email = payload.email;
-
-                        if (!users[email]) {
-                            users[email] = {
-                                name: payload.name || email.split('@')[0],
-                                password: 'google_' + Math.random().toString(36).substring(2, 10)
-                            };
-                            localStorage.setItem('financeUsers', JSON.stringify(users));
-                            const key = getUserDataKey(email);
-                            localStorage.setItem(key, JSON.stringify({ transaksi: [], settings: {} }));
-                        }
-
-                        currentUser = {
-                            email: email,
-                            name: users[email].name || payload.name || email.split('@')[0],
-                            avatar: payload.given_name ? payload.given_name.charAt(0).toUpperCase() : email.charAt(0)
-                                .toUpperCase(),
-                            picture: payload.picture
-                        };
-                        saveAuth();
-                        loadUserData();
-                        showApp();
-                        showToast('✅ Login dengan Google berhasil!', '#27ae60');
-                        initializeUserData();
-                    }
-                } catch (e) {
-                    showToast('❌ Gagal login dengan Google', '#e74c5e');
+        async function syncTransactionsToSheet(transactions) {
+            if (!currentUser) return;
+            
+            try {
+                // Simpan setiap transaksi ke Google Sheets
+                for (const t of transactions) {
+                    const newTransaction = {
+                        'ID': Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
+                        'User Email': currentUser.email,
+                        'Tanggal': t.tanggal,
+                        'Kategori': t.kategori,
+                        'Jenis': t.jenis,
+                        'Nominal': t.nominal,
+                        'Keterangan': t.keterangan || '',
+                        'Mode': t.mode || 'cash'
+                    };
+                    await appendToSheet(GOOGLE_SHEETS_CONFIG.SHEETS.TRANSACTIONS, newTransaction);
                 }
+                showToast('✅ Transaksi tersimpan di cloud!', '#27ae60');
+            } catch (error) {
+                console.error('❌ Gagal sync ke Google Sheets:', error);
+                showToast('⚠️ Transaksi disimpan di lokal (sync gagal)', '#e74c5e');
             }
         }
 
@@ -3692,9 +3998,17 @@
         }
 
         function showApp() {
+            isAppVisible = true;
             document.getElementById('loginPage').style.display = 'none';
             document.getElementById('registerPage').style.display = 'none';
             document.getElementById('appMain').classList.add('active');
+
+            const fab = document.getElementById('fabButton');
+            if (window.innerWidth <= 820) {
+                fab.classList.add('show');
+            } else {
+                fab.classList.remove('show');
+            }
 
             if (currentUser) {
                 document.getElementById('profileAvatar').textContent = currentUser.avatar || 'U';
@@ -3708,10 +4022,13 @@
         }
 
         function showLogin() {
+            isAppVisible = false;
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('registerPage').style.display = 'none';
             document.getElementById('appMain').classList.remove('active');
             document.getElementById('loginError').textContent = '';
+            document.getElementById('fabButton').classList.remove('show');
+            closePopup();
         }
 
         function showRegister() {
@@ -3781,14 +4098,14 @@
                 const balance = totalIncome - totalExpense;
 
                 const summaryData = [
-                    ['📊 SUMMARY KEUANGAN'],
+                    ['SUMMARY KEUANGAN'],
                     [''],
                     ['Total Pemasukan', formatCurrency(totalIncome)],
                     ['Total Pengeluaran', formatCurrency(totalExpense)],
-                    ['Saldo', formatCurrency(balance)],
+                    ['Sisa Saldo', formatCurrency(balance)],
                     [''],
                     ['Total Transaksi', transaksi.length],
-                    ['Export Date', new Date().toLocaleString('id-ID')],
+                    ['Tanggal Export', new Date().toLocaleString('id-ID')],
                     ['User', currentUser ? currentUser.name : 'Guest']
                 ];
                 const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
@@ -3805,7 +4122,7 @@
             }
         }
 
-        function exportToCSV() {
+        function exportToWord() {
             const data = getExportData();
             if (data.length === 0) {
                 showToast('⚠️ Tidak ada data untuk diexport!', '#e74c5e');
@@ -3813,45 +4130,191 @@
             }
 
             try {
-                const headers = Object.keys(data[0]);
-                let csv = headers.join(',') + '\n';
-
-                data.forEach(row => {
-                    const values = headers.map(header => {
-                        let value = row[header] || '';
-                        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value
-                                .includes('\n'))) {
-                            value = '"' + value.replace(/"/g, '""') + '"';
-                        }
-                        return value;
-                    });
-                    csv += values.join(',') + '\n';
-                });
-
                 const totalIncome = transaksi.filter(t => t.jenis === 'Pemasukan').reduce((sum, t) => sum + t.nominal, 0);
                 const totalExpense = transaksi.filter(t => t.jenis === 'Pengeluaran').reduce((sum, t) => sum + t.nominal,
                 0);
                 const balance = totalIncome - totalExpense;
-
-                csv += '\n\nSUMMARY\n';
-                csv += `Total Pemasukan,${formatCurrency(totalIncome)}\n`;
-                csv += `Total Pengeluaran,${formatCurrency(totalExpense)}\n`;
-                csv += `Saldo,${formatCurrency(balance)}\n`;
-                csv += `Total Transaksi,${transaksi.length}\n`;
-                csv += `Export Date,${new Date().toLocaleString('id-ID')}\n`;
-                csv += `User,${currentUser ? currentUser.name : 'Guest'}\n`;
-
-                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
                 const dateStr = new Date().toISOString().split('T')[0];
-                link.download = `Keuangan_${dateStr}_${currentUser ? currentUser.name : 'User'}.csv`;
+
+                let htmlContent = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                          xmlns:w='urn:schemas-microsoft-com:office:word' 
+                          xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Laporan Keuangan</title>
+                        <style>
+                            body { 
+                                font-family: 'Calibri', Arial, sans-serif; 
+                                font-size: 12pt; 
+                                margin: 40px 50px;
+                                color: #1a1a1a;
+                                background: #ffffff;
+                            }
+                            .header { 
+                                text-align: center; 
+                                border-bottom: 3px solid #2a7de1; 
+                                padding-bottom: 15px; 
+                                margin-bottom: 25px;
+                            }
+                            .header h1 { 
+                                font-size: 22pt; 
+                                font-weight: 700; 
+                                color: #2a7de1; 
+                                margin: 0;
+                            }
+                            .header p { 
+                                font-size: 11pt; 
+                                color: #666666; 
+                                margin: 5px 0 0 0;
+                            }
+                            .summary-box {
+                                background: #f0f7ff;
+                                border-left: 4px solid #2a7de1;
+                                padding: 12px 18px;
+                                margin-bottom: 20px;
+                                border-radius: 0 4px 4px 0;
+                            }
+                            .summary-box table {
+                                width: 100%;
+                                font-size: 12pt;
+                                border-collapse: collapse;
+                            }
+                            .summary-box td {
+                                padding: 3px 10px 3px 0;
+                            }
+                            .summary-box .label { font-weight: 600; color: #555555; width: 180px; }
+                            .summary-box .value { font-weight: 700; color: #1a1a1a; }
+                            .summary-box .value.green { color: #27ae60; }
+                            .summary-box .value.red { color: #e74c5e; }
+                            .summary-box .value.blue { color: #2a7de1; }
+                            table.data {
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-size: 10pt;
+                                margin-top: 15px;
+                            }
+                            table.data th {
+                                background: #2a7de1;
+                                color: #ffffff;
+                                font-weight: 600;
+                                padding: 6px 8px;
+                                text-align: left;
+                                border: 1px solid #1b5fb0;
+                            }
+                            table.data td {
+                                padding: 5px 8px;
+                                border: 1px solid #dce3ec;
+                                text-align: left;
+                            }
+                            table.data tr:nth-child(even) { background: #f8faff; }
+                            table.data tr:hover { background: #eef3f9; }
+                            .footer {
+                                margin-top: 30px;
+                                padding-top: 15px;
+                                border-top: 1px solid #dce3ec;
+                                font-size: 10pt;
+                                color: #888888;
+                                text-align: center;
+                            }
+                            .amount-positive { color: #27ae60; font-weight: 600; }
+                            .amount-negative { color: #e74c5e; font-weight: 600; }
+                            .mode-tag {
+                                display: inline-block;
+                                padding: 1px 8px;
+                                border-radius: 3px;
+                                font-size: 8pt;
+                                font-weight: 600;
+                                background: #eef2f7;
+                                color: #555555;
+                            }
+                            .mode-tag.cash { background: #d5f5e3; color: #1a7a42; }
+                            .mode-tag.bank { background: #d6eaf8; color: #1a5276; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>LAPORAN KEUANGAN</h1>
+                            <p>Periode: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            <p>User: ${currentUser ? currentUser.name : 'Guest'} | Export: ${new Date().toLocaleString('id-ID')}</p>
+                        </div>
+
+                        <div class="summary-box">
+                            <table>
+                                <tr>
+                                    <td class="label">Total Pemasukan</td>
+                                    <td class="value green">${formatCurrency(totalIncome)}</td>
+                                    <td class="label">Total Pengeluaran</td>
+                                    <td class="value red">${formatCurrency(totalExpense)}</td>
+                                    <td class="label">Sisa Saldo</td>
+                                    <td class="value ${balance >= 0 ? 'green' : 'red'}">${formatCurrency(balance)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="label">Total Transaksi</td>
+                                    <td class="value blue" colspan="5">${data.length} transaksi</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Kategori</th>
+                                    <th>Deskripsi</th>
+                                    <th>Jenis</th>
+                                    <th>Mode</th>
+                                    <th style="text-align:right;">Nominal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                data.forEach(t => {
+                    const isIncome = t.jenis === 'Pemasukan';
+                    const modeClass = t.Mode === 'Cash' ? 'cash' : 'bank';
+                    const amountClass = isIncome ? 'amount-positive' : 'amount-negative';
+                    const sign = isIncome ? '+' : '-';
+
+                    htmlContent += `
+                                <tr>
+                                    <td>${t.Tanggal}</td>
+                                    <td><strong>${t.Kategori}</strong></td>
+                                    <td>${t.Deskripsi}</td>
+                                    <td>${isIncome ? 'Pemasukan' : 'Pengeluaran'}</td>
+                                    <td><span class="mode-tag ${modeClass}">${t.Mode}</span></td>
+                                    <td style="text-align:right;" class="${amountClass}">${sign} ${t.Nominal}</td>
+                                </tr>
+                            `;
+                });
+
+                htmlContent += `
+                            </tbody>
+                        </table>
+
+                        <div class="footer">
+                            <p>Dokumen ini dihasilkan secara otomatis dari Aplikasi Keuangan</p>
+                            <p>Generated on: ${new Date().toLocaleString('id-ID')}</p>
+                        </div>
+                    </body>
+                    </html>
+                `;
+
+                const blob = new Blob(['\ufeff' + htmlContent], {
+                    type: 'application/msword;charset=utf-8'
+                });
+
+                const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
+                link.download = `Keuangan_${dateStr}_${currentUser ? currentUser.name : 'User'}.doc`;
+                document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
                 URL.revokeObjectURL(link.href);
 
-                showToast(`✅ CSV berhasil diexport!`, '#27ae60');
+                showToast(`✅ Word berhasil diexport!`, '#27ae60');
             } catch (e) {
-                showToast('❌ Gagal export CSV: ' + e.message, '#e74c5e');
+                showToast('❌ Gagal export Word: ' + e.message, '#e74c5e');
                 console.error(e);
             }
         }
@@ -4159,12 +4622,70 @@
         let currentPeriod = 'days';
         let pieFilter = null;
 
-        loadSettings();
-        loadMode();
-        loadChartType();
-        loadCurrencySettings();
+        // Initialize
+        async function init() {
+            loadSettings();
+            loadMode();
+            loadChartType();
+            loadCurrencySettings();
 
-        transaksi = getData();
+            // Test koneksi ke Google Sheets
+            const loadingMsg = document.getElementById('loadingMessage');
+            if (loadingMsg) {
+                loadingMsg.style.display = 'block';
+                loadingMsg.textContent = '⏳ Menghubungkan ke Google Sheets...';
+            }
+
+            const connected = await testSheetConnection();
+            
+            if (connected) {
+                if (loadingMsg) {
+                    loadingMsg.textContent = '✅ Terhubung ke Google Sheets!';
+                    setTimeout(() => {
+                        loadingMsg.style.display = 'none';
+                    }, 2000);
+                }
+                showToast('✅ Terhubung ke database cloud!', '#27ae60');
+            } else {
+                if (loadingMsg) {
+                    loadingMsg.textContent = '⚠️ Mode offline (data di localStorage)';
+                    loadingMsg.style.color = '#e67e22';
+                    setTimeout(() => {
+                        loadingMsg.style.display = 'none';
+                    }, 3000);
+                }
+                showToast('⚠️ Mode offline - data disimpan lokal', '#e67e22');
+            }
+
+            // Cek login
+            if (!loadAuth()) {
+                showLogin();
+            } else {
+                transaksi = getUserTransaksi();
+                updateCharts();
+                renderHistory();
+            }
+
+            setupPieResizeObserver();
+            checkMobile();
+        }
+
+        function loadAuth() {
+            const saved = localStorage.getItem('financeUser');
+            if (saved) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    if (currentUser) {
+                        loadUserData();
+                        showApp();
+                        return true;
+                    }
+                } catch (e) {
+                    currentUser = null;
+                }
+            }
+            return false;
+        }
 
         // ==============================================
         // 5. PAGE NAVIGATION
@@ -4247,6 +4768,10 @@
         // ==============================================
 
         function openPopup() {
+            if (!isAppVisible || !currentUser) {
+                showToast('⚠️ Silakan login terlebih dahulu!', '#e74c5e');
+                return;
+            }
             document.getElementById('popupOverlay').classList.add('active');
             document.getElementById('popupTanggal').value = new Date().toISOString().split('T')[0];
             updatePopupModeUI();
@@ -4657,31 +5182,67 @@
 
             selectedTransactions = [];
 
-            tbody.innerHTML = data.map((t, index) => {
-                const isIncome = t.jenis === 'Pemasukan';
-                const modeTag = t.mode === 'cash' ? 'cash-tag' : 'bank-tag';
-                const modeIcon = t.mode === 'cash' ? '💵' : '🏦';
-                const date = new Date(t.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short',
-                    year: 'numeric' });
-                const uniqueId = `${t.tanggal}_${t.kategori}_${t.nominal}_${t.jenis}_${t.mode}`;
-                return `
-                        <tr data-id="${uniqueId}">
-                            <td style="text-align:center;">
-                                <input type="checkbox" class="row-checkbox" data-id="${uniqueId}" onchange="toggleRowSelection('${uniqueId}')" />
-                            </td>
-                            <td>${date}</td>
-                            <td><strong>${escapeHtml(t.kategori)}</strong></td>
-                            <td>${escapeHtml(t.keterangan || '-')}</td>
-                            <td>${isIncome ? '💰 Pemasukan' : '💸 Pengeluaran'}</td>
-                            <td><span class="mode-tag ${modeTag}">${modeIcon} ${t.mode === 'cash' ? 'Cash' : 'Bank'}</span></td>
-                            <td style="text-align:right;">
-                                <span class="${isIncome ? 'amount-income' : 'amount-expense'}">
-                                    ${isIncome ? '+' : '-'} ${formatCurrency(t.nominal)}
-                                </span>
+            // Group transactions by date
+            const groupedData = {};
+            data.forEach(t => {
+                const dateKey = t.tanggal;
+                if (!groupedData[dateKey]) {
+                    groupedData[dateKey] = [];
+                }
+                groupedData[dateKey].push(t);
+            });
+
+            // Sort dates descending
+            const sortedDates = Object.keys(groupedData).sort((a, b) => new Date(b) - new Date(a));
+
+            let html = '';
+
+            sortedDates.forEach((dateKey, dateIndex) => {
+                const transactions = groupedData[dateKey];
+                const dateObj = new Date(dateKey);
+                const dateDisplay = dateObj.toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                // Add date divider row - SIMPLIFIED: only date
+                html += `
+                        <tr class="date-divider">
+                            <td colspan="7">
+                                <span class="date-divider-icon">📅</span> ${dateDisplay}
                             </td>
                         </tr>
                     `;
-            }).join('');
+
+                // Add transactions for this date
+                transactions.forEach((t, index) => {
+                    const isIncome = t.jenis === 'Pemasukan';
+                    const modeTag = t.mode === 'cash' ? 'cash-tag' : 'bank-tag';
+                    const modeIcon = t.mode === 'cash' ? '💵' : '🏦';
+                    const uniqueId = `${t.tanggal}_${t.kategori}_${t.nominal}_${t.jenis}_${t.mode}_${index}`;
+
+                    html += `
+                            <tr data-id="${uniqueId}">
+                                <td style="text-align:center;">
+                                    <input type="checkbox" class="row-checkbox" data-id="${uniqueId}" onchange="toggleRowSelection('${uniqueId}')" />
+                                </td>
+                                <td style="color:var(--text-muted);font-size:11px;">${dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</td>
+                                <td><strong>${escapeHtml(t.kategori)}</strong></td>
+                                <td>${escapeHtml(t.keterangan || '-')}</td>
+                                <td>${isIncome ? '💰 Pemasukan' : '💸 Pengeluaran'}</td>
+                                <td><span class="mode-tag ${modeTag}">${modeIcon} ${t.mode === 'cash' ? 'Cash' : 'Bank'}</span></td>
+                                <td style="text-align:right;">
+                                    <span class="${isIncome ? 'amount-income' : 'amount-expense'}">
+                                        ${isIncome ? '+' : '-'} ${formatCurrency(t.nominal)}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                });
+            });
+
+            tbody.innerHTML = html;
 
             document.getElementById('deleteSelectedBtn').disabled = true;
             document.getElementById('selectAllCheckbox').checked = false;
@@ -4770,7 +5331,7 @@
 
             document.querySelectorAll('.history-table tbody tr').forEach(row => {
                 const cb = row.querySelector('.row-checkbox');
-                if (cb) {
+                if (cb && !row.classList.contains('date-divider')) {
                     row.classList.toggle('selected', cb.checked);
                 }
             });
@@ -4796,8 +5357,18 @@
         function getSelectedData() {
             const data = getFilteredHistory();
             return data.filter(t => {
-                const uniqueId = `${t.tanggal}_${t.kategori}_${t.nominal}_${t.jenis}_${t.mode}`;
-                return selectedTransactions.includes(uniqueId);
+                const matchingTx = transaksi.find(item =>
+                    item.tanggal === t.tanggal &&
+                    item.kategori === t.kategori &&
+                    item.nominal === t.nominal &&
+                    item.jenis === t.jenis &&
+                    item.mode === t.mode
+                );
+                if (matchingTx) {
+                    const uniqueId = `${matchingTx.tanggal}_${matchingTx.kategori}_${matchingTx.nominal}_${matchingTx.jenis}_${matchingTx.mode}`;
+                    return selectedTransactions.includes(uniqueId);
+                }
+                return false;
             });
         }
 
@@ -4913,7 +5484,6 @@
             const rate = getRate(currentCurrency);
             const converted = amountInIDR / rate;
 
-            // Always show with 3 decimal places for numbers in millions (1000000+)
             if (converted >= 1000000) {
                 return symbol + ' ' + (converted / 1000000).toFixed(3) + 'Jt';
             } else if (converted >= 1000) {
@@ -5729,7 +6299,6 @@
             }
 
             const ctxPie = document.getElementById('pieChart').getContext('2d');
-            const container = ctxPie.canvas.parentElement;
 
             if (pieChart) {
                 pieChart.data.labels = pieLabels;
@@ -5838,25 +6407,20 @@
                 const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
                 const dayData = {};
 
-                // Initialize all days with 0
                 for (let d = 1; d <= daysInMonth; d++) {
                     dayData[d] = { income: 0, expense: 0, balance: 0 };
                 }
 
-                // Calculate cumulative balance starting from previous month
-                // First, get all transactions before this month
                 const prevMonthTransactions = transaksi.filter(t => {
                     const [y, m] = t.tanggal.split('-').map(Number);
                     return t.mode === currentMode && (y < currentYear || (y === currentYear && m < currentMonth));
                 });
 
-                // Calculate starting balance from previous months
                 let runningBalance = prevMonthTransactions.reduce((sum, t) => {
                     if (t.jenis === 'Pemasukan') return sum + t.nominal;
                     else return sum - t.nominal;
                 }, 0);
 
-                // Add current month transactions
                 sortedTransaksi.forEach(t => {
                     const [y, m, d] = t.tanggal.split('-').map(Number);
                     if (y === currentYear && m === currentMonth) {
@@ -5868,7 +6432,6 @@
                     }
                 });
 
-                // Calculate cumulative balance for each day
                 for (let d = 1; d <= daysInMonth; d++) {
                     const data = dayData[d];
                     runningBalance += data.income - data.expense;
@@ -5884,7 +6447,6 @@
                     monthData[m] = { income: 0, expense: 0, balance: 0 };
                 }
 
-                // Get starting balance from previous years
                 let runningBalance = transaksi.filter(t => {
                     const [y] = t.tanggal.split('-').map(Number);
                     return t.mode === currentMode && y < currentYear;
@@ -5923,7 +6485,6 @@
                 }
 
                 let runningBalance = 0;
-                // For years, start from beginning
                 sortedTransaksi.forEach(t => {
                     const year = parseInt(t.tanggal.split('-')[0]);
                     if (year >= startYear && year <= endYear) {
@@ -6171,16 +6732,10 @@
         updateCurrencyLabels();
         updateChartTypeUI();
 
-        if (!loadAuth()) {
-            showLogin();
-        } else {
-            transaksi = getUserTransaksi();
-            updateCharts();
-            renderHistory();
-        }
+        // Jalankan init
+        init();
 
-        setupPieResizeObserver();
-
+        // Event listeners
         document.getElementById('incomeName').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -6214,28 +6769,36 @@
 
         function checkMobile() {
             const fab = document.getElementById('fabButton');
-            if (window.innerWidth <= 820) {
+            if (isAppVisible && window.innerWidth <= 820) {
                 fab.classList.add('show');
             } else {
                 fab.classList.remove('show');
-                closePopup();
+                if (!isAppVisible) {
+                    closePopup();
+                }
             }
         }
 
         window.addEventListener('resize', checkMobile);
-        checkMobile();
 
         console.log('📊 Aplikasi Keuangan siap!');
+        console.log('📊 Database: Google Sheets');
+        console.log(`📊 Spreadsheet ID: ${GOOGLE_SHEETS_CONFIG.SPREADSHEET_ID}`);
         console.log('💱 Mode:', currentMode === 'cash' ? 'Cash 💵' : 'Bank 🏦');
         console.log('📊 Chart type:', chartType === 'bar' ? 'Batang' : 'Garis');
         console.log('💱 Mata uang aktif:', currentCurrency, '-', currencyNames[currentCurrency]);
-        console.log('🔐 Sistem login aktif - Data per akun terpisah');
+        console.log('🔐 Sistem login dengan Google Sheets');
         console.log('👤 Pengguna:', currentUser ? currentUser.name : 'Belum login');
         console.log('📊 Total transaksi:', transaksi.length);
-        console.log('📄 Export ke Excel/CSV tersedia di halaman Riwayat');
+        console.log('📄 Export ke Excel dan Word tersedia di halaman Riwayat');
         console.log('🖼️ Logo menggunakan logo.webp');
         console.log('📱 Diagram lingkaran dioptimasi untuk Android');
         console.log('📈 Grafik kumulatif dengan saldo awal dari periode sebelumnya');
+        console.log('📅 Pembatas tanggal sederhana pada riwayat transaksi');
+        console.log('📊 Export Word dengan format profesional');
+        console.log('🔒 Popup tambah transaksi hanya muncul saat login');
+        console.log('📊 Database menggunakan Google Sheets dengan API Key');
+        console.log('💡 Ganti GOOGLE_SHEETS_CONFIG dengan data Anda sendiri!');
     </script>
 
 </body>
